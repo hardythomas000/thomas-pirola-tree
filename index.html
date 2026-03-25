@@ -326,6 +326,47 @@ const nodes = [
   // Gibson ancestors
   { id: 'wm_gibson', name: 'William Gibson Snr', family: 'gibson', gen: 0, dates: '1813–1902', detail: ['Born KILMAURS, Scotland, 1813','Married Mary McAllister, Kilmarnock, 1838','4 sons (Angus, William Jr, James, John) + 3 daughters — all born Scotland','1863: Father + eldest son Angus sailed to Brisbane on Cairngorm','1864: rest of family followed on Warren Hastings (120-DAY voyage!)','Settled Doughboy Creek on Brisbane River — cleared land by hand','🏭 1866: started sugar with cane plants from Hon. Louis Hope of Ormiston','1867: floating sugar mill "Walrus" crushed their first crop','1868: built CLYDESDALE MILL at Hemmant — wooden rollers, horse-powered','1883: acquired 1,318 acres at Bundaberg → BINGERA PLANTATION','⚠️ CONTROVERSY: Used KANAKA labour — South Sea Islanders stolen from their homes','The Gibsons were noted for providing "some of the WORST conditions" for these workers','This is the dark side of the Gibson sugar fortune','Angus became member of QLD Legislative Council; two brothers were Methodist preachers','Company → Gibson & Howes → Fairymead → Bundaberg Sugar Company','Died age 89 at Bingera, December 1902','📖 Robert Campbell Gibson (4th gen) wrote "The Gibson Family\'s Early Years 1863–1943"'] },
   { id: 'mary_mca', name: 'Mary McAllister', family: 'gibson', gen: 0, dates: '', detail: ['From Kilmarnock, Scotland','Married William Gibson 1838','Arrived Brisbane June 1864 on Warren Hastings — 120 DAYS at sea with 3 sons and 2 daughters','Youngest son John was only 6 years old on the voyage'] },
+
+  // Gibson Gen 1 — William Snr's sons
+  { id: 'angus_g', name: 'Angus Gibson', family: 'gibson', gen: 2, dates: '1840–1920', detail: ['Eldest son, sailed with father on Cairngorm 1863','Member of QLD Legislative Council','Managed Bingera Plantation — 200 Kanaka workers at peak','ADB biography: "Gibson, Angus (1840–1920)"','Trove 1920 obituary names all children'] },
+  { id: 'wm_jr', name: 'William Gibson Jr', family: 'gibson', gen: 2, dates: 'd. 1915', detail: ['Second son','Married Katherine Kennedy','Father of Angus Alexander Gibson','Trove 1915 obituary names sons and daughter'] },
+  { id: 'katherine_k', name: 'Katherine Kennedy', family: 'gibson', gen: 2, dates: '', detail: ['Married William Gibson Jr','Mother of Angus Alexander Gibson'] },
+
+  // Gibson Gen 2 — Jean's parents
+  { id: 'angus_alex', name: 'Angus Alexander Gibson', family: 'gibson', gen: 3, dates: '', detail: ['Son of William Gibson Jr and Katherine Kennedy','Married Elizabeth May Jones','Father of Jean MacAlister Gibson (Hardy\'s grandmother)','Also father of Kenneth, Ronald, Meg, Angus Jr'] },
+  { id: 'eliz_jones', name: 'Elizabeth May Jones', family: 'gibson', gen: 3, dates: '', detail: ['Full name confirmed by QLD BDM (Jean\'s birth record 1923/C/2163)','Previously known only as "May Jones" from the Gibson family tree','Married Angus Alexander Gibson'] },
+
+  // Gibson Gen 3 — Jean's siblings
+  { id: 'ken_gibson', name: 'Kenneth Gibson', family: 'gibson', gen: 3, dates: '', detail: ['Jean\'s sibling'] },
+  { id: 'ronald_gibson', name: 'Ronald Gibson', family: 'gibson', gen: 3, dates: '', detail: ['Jean\'s sibling'] },
+  { id: 'meg_gibson', name: 'Meg Gibson', family: 'gibson', gen: 3, dates: '', detail: ['Jean\'s sister — Hardy remembers her'] },
+  { id: 'angus_jr_g', name: 'Angus Gibson Jr', family: 'gibson', gen: 3, dates: '', detail: ['Jean\'s brother — name "Angus" familiar to Hardy'] },
+
+  // Thomas extended — Turton's branch
+  { id: 'kate_douglas', name: 'Kate Gertrude Douglas', family: 'thomas', gen: 3, dates: '', detail: ['Married Turton Samuel Thomas','Mother of Jocelyn Langslow Thomas'] },
+  { id: 'joc_langslow', name: 'Jocelyn Langslow Thomas', family: 'thomas', gen: 4, dates: '1886–1961', detail: ['Born 23 Oct 1886, Port Sorell (Libraries Tasmania birth record)','Son of Turton Samuel and Kate Gertrude Douglas','Married Annie Elizabeth Nankivell 28 Aug 1912 in Melbourne — she was granddaughter of Dr Richard Youl','Retired Farmer, 49 Appledore Street, Devonport','Died 19 Jul 1961. Will proved 30 Oct 1961 — estate £24,147','SEVEN children: Richard Turton, Jocelyn Douglas, Elizabeth (Randison), Annette (Snow), Judith (Thwaites), Grace Mary (Lester), Diana Langslow (Patterson)','Bequeathed £150 to St George\'s Church New Ground for burial ground upkeep'] },
+  { id: 'annie_nank', name: 'Annie Elizabeth Nankivell', family: 'youl', gen: 4, dates: '', detail: ['Granddaughter of Dr Richard Youl — connecting Youl and Thomas families','Married Jocelyn Langslow Thomas 28 Aug 1912, Melbourne','She was 26, he was 26 — both from Tasmania/Victoria','Mother of 7 children'] },
+  { id: 'snow_thomas', name: 'Richard Turton Thomas', family: 'thomas', gen: 5, dates: 'b. 27 Nov 1917', detail: ['Born West Devonport (Libraries Tasmania birth record)','Farmer at New Ground via Latrobe, Tasmania','Likely = "SNOW THOMAS" — the Thomas family historian at North Down','Executor of his father\'s will with brother Jocelyn Douglas','Contact via Bass Strait Maritime Centre: 03 6424 7100'] },
+
+  // Thomas — Rev Dr William's other children
+  { id: 'marianne_t', name: 'Marianne Theresa Thomas', family: 'thomas', gen: 1, dates: '', detail: ['Daughter of Rev Dr William Bartholomew Thomas','Sister of Jocelyn, Bartholomew, and Henry','Her 4 orphaned children were raised by Bartholomew\'s widow Louisa'] },
+
+  // Pirola — Ron's family
+  { id: 'mavis_p', name: 'Mavis Pirola', family: 'pirola', gen: 3, dates: '', detail: ['Wife of Dr Ron Pirola — married 63+ years','Met at a university party Ron almost didn\'t attend','Joint Medal of Order of Australia (1997)','Introduced Marriage Encounter to Australia with Ron','Honorary Doctorate ACU (2016) with Ron','Honoured by Pope Francis at St Mary\'s Cathedral 2019'] },
+  { id: 'byron_p', name: 'Byron Pirola', family: 'pirola', gen: 4, dates: 'b. ~1960', detail: ['Son of Ron and Mavis','BSc Honours Biochemistry UNSW 1982','Partner at EY Port Jackson Partners','Married Francine — 5 children','Guardian of aunt Gaie in Phoenix, Arizona','Honoured by Pope Francis at St Mary\'s Cathedral 2019 with parents'] },
+  { id: 'patricia_h', name: 'Patricia Hildebrandt', family: 'other', gen: 2, dates: '', detail: ['Gino Sr\'s second wife — married after Grace\'s death','25 years together','Of Sydney'] },
+
+  // Spalding/Tribe
+  { id: 'sylvia_tribe', name: 'Sylvia Verona Tribe', family: 'spalding', gen: 2, dates: '', detail: ['Roma\'s mother — née Spalding, married Cecil Tribe','Full name: Sylvia Verona Tribe (née Spalding)','Roma may have used mother\'s maiden name Spalding instead of Tribe','❓ Hanna checking records for more details'] },
+  { id: 'cecil_tribe', name: 'Cecil Tribe', family: 'spalding', gen: 2, dates: '', detail: ['Roma\'s father','First name uncertain — "Cecil" per Hanna','❓ Further research needed'] },
+
+  // Hardy's children
+  { id: 'benjamin', name: 'Benjamin Thomas', family: 'thomas', gen: 7, dates: '', detail: ['Son of Hardy and Noor Julaiha'] },
+  { id: 'noor_j_jr', name: 'Noor Julaiha Thomas', family: 'thomas', gen: 7, dates: '', detail: ['Daughter of Hardy and Noor Julaiha'] },
+  { id: 'leonard', name: 'Leonard Djata Thomas', family: 'thomas', gen: 7, dates: '', detail: ['Son of Hardy and Noor Julaiha'] },
+
+  // Mary Connor — Rev Bart Sr's wife
+  { id: 'mary_connor', name: 'Mary Connor', family: 'other', gen: -1, dates: '1705–', detail: ['Born Bandon, Cork, Ireland','Married her cousin Rev Bartholomew Thomas in 1739 at Johnston, County Wexford'] },
 ];
 
 const links = [
@@ -373,14 +414,47 @@ const links = [
   { source: 'fred_barlow', target: 'arthur_b', type: 'parent' },
   { source: 'arthur_b', target: 'grace', type: 'parent' },
 
-  // Gibson ancestry
+  // Gibson ancestry — now with intermediate generations
   { source: 'wm_gibson', target: 'mary_mca', type: 'spouse' },
-  { source: 'wm_gibson', target: 'jean', type: 'parent' },
+  { source: 'wm_gibson', target: 'angus_g', type: 'parent' },
+  { source: 'wm_gibson', target: 'wm_jr', type: 'parent' },
+  { source: 'wm_jr', target: 'katherine_k', type: 'spouse' },
+  { source: 'wm_jr', target: 'angus_alex', type: 'parent' },
+  { source: 'angus_alex', target: 'eliz_jones', type: 'spouse' },
+  { source: 'angus_alex', target: 'jean', type: 'parent' },
+  { source: 'angus_alex', target: 'ken_gibson', type: 'parent' },
+  { source: 'angus_alex', target: 'ronald_gibson', type: 'parent' },
+  { source: 'angus_alex', target: 'meg_gibson', type: 'parent' },
+  { source: 'angus_alex', target: 'angus_jr_g', type: 'parent' },
 
-  // Hardy's parents + Hardy
+  // Thomas — Turton's branch
+  { source: 'turton', target: 'kate_douglas', type: 'spouse' },
+  { source: 'turton', target: 'joc_langslow', type: 'parent' },
+  { source: 'joc_langslow', target: 'annie_nank', type: 'spouse' },
+  { source: 'joc_langslow', target: 'snow_thomas', type: 'parent' },
+
+  // Thomas — Rev Dr William's other children
+  { source: 'rev_bart', target: 'marianne_t', type: 'parent' },
+
+  // Rev Bart Sr's wife
+  { source: 'rev_bart_sr', target: 'mary_connor', type: 'spouse' },
+
+  // Pirola — Ron's family
+  { source: 'ron', target: 'mavis_p', type: 'spouse' },
+  { source: 'ron', target: 'byron_p', type: 'parent' },
+  { source: 'gino_sr', target: 'patricia_h', type: 'spouse' },
+
+  // Spalding/Tribe — Roma's parents
+  { source: 'sylvia_tribe', target: 'cecil_tribe', type: 'spouse' },
+  { source: 'sylvia_tribe', target: 'roma', type: 'parent' },
+
+  // Hardy's parents + Hardy + children
   { source: 'gregory', target: 'hanna', type: 'spouse' },
   { source: 'gregory', target: 'hardy', type: 'parent' },
   { source: 'hardy', target: 'noor', type: 'spouse' },
+  { source: 'hardy', target: 'benjamin', type: 'parent' },
+  { source: 'hardy', target: 'noor_j_jr', type: 'parent' },
+  { source: 'hardy', target: 'leonard', type: 'parent' },
 ];
 
 // Build
