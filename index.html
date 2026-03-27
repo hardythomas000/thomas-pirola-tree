@@ -198,6 +198,59 @@
   }
   .ctrl-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
   .ctrl-btn.theme-toggle { font-size: 14px; }
+  .ctrl-btn.add-btn { font-size: 18px; font-weight: 300; }
+
+  #add-panel {
+    position: fixed;
+    top: 0; right: -320px;
+    width: 300px; height: 100vh;
+    background: var(--bg-warm);
+    border-left: 1px solid rgba(255,255,255,0.08);
+    z-index: 20;
+    padding: 20px;
+    overflow-y: auto;
+    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  #add-panel.open { right: 0; }
+  #add-panel h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 300;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+  #add-panel label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 12px 0 4px;
+  }
+  #add-panel input, #add-panel select, #add-panel textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+  #add-panel textarea { min-height: 80px; resize: vertical; }
+  #add-panel select option { background: var(--bg); }
+  .form-row { display: flex; gap: 8px; }
+  .form-row > * { flex: 1; }
+  .form-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .form-actions button {
+    flex: 1; padding: 10px;
+    border: none; border-radius: 4px;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-save { background: var(--thomas); color: #0f0f12; }
+  .btn-cancel { background: rgba(255,255,255,0.08); color: var(--text-dim); }
+  .btn-export { background: rgba(255,255,255,0.06); color: var(--text-dim); margin-top: 8px; width: 100%; padding: 8px; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; font-size: 11px; cursor: pointer; }
+  .added-count { font-size: 11px; color: var(--text-dim); margin-top: 12px; }
 
   .node-label {
     font-family: 'DM Sans', sans-serif;
@@ -235,10 +288,51 @@
 </div>
 
 <div id="controls">
+  <button class="ctrl-btn add-btn" onclick="toggleAddPanel()" title="Add person">＋</button>
   <button class="ctrl-btn" onclick="zoomIn()">+</button>
   <button class="ctrl-btn" onclick="zoomOut()">−</button>
   <button class="ctrl-btn" onclick="resetView()">⟲</button>
   <button class="ctrl-btn theme-toggle" onclick="toggleTheme()" id="theme-btn">☀</button>
+</div>
+
+<div id="add-panel">
+  <h3>Add Person</h3>
+  <label>Name</label>
+  <input type="text" id="add-name" placeholder="Full name">
+  <label>Family</label>
+  <select id="add-family">
+    <option value="thomas">Thomas</option>
+    <option value="pirola">Pirola</option>
+    <option value="gibson">Gibson</option>
+    <option value="barlow">Barlow</option>
+    <option value="spalding">Spalding</option>
+    <option value="youl">Youl</option>
+    <option value="other">Other</option>
+  </select>
+  <label>Dates</label>
+  <input type="text" id="add-dates" placeholder="e.g. 1850–1920">
+  <div class="form-row">
+    <div>
+      <label>Link to</label>
+      <select id="add-link-target"></select>
+    </div>
+    <div>
+      <label>Relationship</label>
+      <select id="add-link-type">
+        <option value="parent">Child of</option>
+        <option value="spouse">Spouse of</option>
+      </select>
+    </div>
+  </div>
+  <label>Details (one per line)</label>
+  <textarea id="add-details" placeholder="Born in...&#10;Married...&#10;Died..."></textarea>
+  <label><input type="checkbox" id="add-key"> Key ancestor</label>
+  <div class="form-actions">
+    <button class="btn-save" onclick="addPerson()">Add</button>
+    <button class="btn-cancel" onclick="toggleAddPanel()">Cancel</button>
+  </div>
+  <button class="btn-export" onclick="exportAdded()">Export added people (copy)</button>
+  <div class="added-count" id="added-count"></div>
 </div>
 
 <script>
@@ -690,6 +784,156 @@ function toggleTheme() {
   node.selectAll('.node-label-main')
     .attr('fill', () => getComputedStyle(document.documentElement).getPropertyValue('--text').trim());
 }
+
+// --- Add Person UI ---
+function populateLinkTargets() {
+  const sel = document.getElementById('add-link-target');
+  sel.innerHTML = '<option value="">(none)</option>';
+  nodes.slice().sort((a,b) => a.name.localeCompare(b.name)).forEach(n => {
+    sel.innerHTML += `<option value="${n.id}">${n.name}</option>`;
+  });
+}
+populateLinkTargets();
+
+function toggleAddPanel() {
+  document.getElementById('add-panel').classList.toggle('open');
+}
+
+function addPerson() {
+  const name = document.getElementById('add-name').value.trim();
+  if (!name) return;
+  const family = document.getElementById('add-family').value;
+  const dates = document.getElementById('add-dates').value.trim();
+  const details = document.getElementById('add-details').value.split('\n').filter(x => x.trim());
+  const key = document.getElementById('add-key').checked;
+  const linkTarget = document.getElementById('add-link-target').value;
+  const linkType = document.getElementById('add-link-type').value;
+
+  const id = 'usr_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+
+  // Figure out generation from linked person
+  let gen = 3;
+  if (linkTarget) {
+    const parent = nodes.find(n => n.id === linkTarget);
+    if (parent) gen = linkType === 'parent' ? parent.gen + 1 : parent.gen;
+  }
+
+  const newNode = { id, name, family, gen, dates, detail: details, key };
+  nodes.push(newNode);
+
+  if (linkTarget) {
+    const newLink = linkType === 'parent'
+      ? { source: linkTarget, target: id, type: 'parent' }
+      : { source: id, target: linkTarget, type: 'spouse' };
+    links.push(newLink);
+  }
+
+  // Re-render
+  rebuildGraph();
+
+  // Save to localStorage
+  saveUserNodes();
+
+  // Reset form
+  document.getElementById('add-name').value = '';
+  document.getElementById('add-dates').value = '';
+  document.getElementById('add-details').value = '';
+  document.getElementById('add-key').checked = false;
+  toggleAddPanel();
+  updateAddedCount();
+}
+
+function rebuildGraph() {
+  // Rebuild links
+  link.data(links).join('line')
+    .attr('stroke', linkColor)
+    .attr('stroke-width', d => d.type === 'spouse' ? 1.2 : 2)
+    .attr('stroke-dasharray', d => d.type === 'spouse' ? '4,5' : 'none')
+    .attr('stroke-linecap', 'round');
+
+  // Rebuild nodes
+  const nodeJoin = node.data(nodes, d => d.id).join(
+    enter => {
+      const g = enter.append('g')
+        .attr('cursor', 'pointer')
+        .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+      g.append('circle')
+        .attr('r', d => d.key ? 10 : 7)
+        .attr('fill', d => families[d.family]?.color || '#888')
+        .attr('stroke', d => d.key ? families[d.family]?.color || '#888' : 'none')
+        .attr('stroke-width', d => d.key ? 2 : 0)
+        .attr('stroke-opacity', 0.3)
+        .attr('fill-opacity', d => d.key ? 1 : 0.7);
+      g.append('text')
+        .attr('class', d => d.key ? 'node-label node-label-main' : 'node-label')
+        .attr('dy', d => d.key ? -16 : -12)
+        .text(d => { const p = d.name.split(' '); return p.length <= 2 ? d.name : p[0]+' '+p[p.length-1]; });
+      g.on('click', (event, d) => { event.stopPropagation(); showPanel(d); });
+      return g;
+    }
+  );
+
+  // Update simulation
+  simulation.nodes(nodes);
+  simulation.force('link').links(links);
+  simulation.alpha(0.5).restart();
+  populateLinkTargets();
+}
+
+// localStorage persistence for user-added nodes
+const STORAGE_KEY = 'thomas-pirola-user-nodes';
+
+function saveUserNodes() {
+  const userNodes = nodes.filter(n => n.id.startsWith('usr_'));
+  const userLinks = links.filter(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    return sid.startsWith('usr_') || tid.startsWith('usr_');
+  }).map(l => ({
+    source: typeof l.source === 'object' ? l.source.id : l.source,
+    target: typeof l.target === 'object' ? l.target.id : l.target,
+    type: l.type
+  }));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes: userNodes, links: userLinks }));
+}
+
+function loadUserNodes() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+  try {
+    const data = JSON.parse(saved);
+    data.nodes.forEach(n => { if (!nodes.find(x => x.id === n.id)) nodes.push(n); });
+    data.links.forEach(l => { if (!links.find(x => (typeof x.source === 'object' ? x.source.id : x.source) === l.source && (typeof x.target === 'object' ? x.target.id : x.target) === l.target)) links.push(l); });
+    rebuildGraph();
+    updateAddedCount();
+  } catch(e) {}
+}
+
+function exportAdded() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+  const data = JSON.parse(saved);
+  const text = '// User-added nodes\n' +
+    data.nodes.map(n => `  { id: '${n.id}', name: '${n.name.replace(/'/g,"\\'")}', family: '${n.family}', gen: ${n.gen}, dates: '${(n.dates||'').replace(/'/g,"\\'")}', detail: [${n.detail.map(d => `'${d.replace(/'/g,"\\'")}'`).join(', ')}]${n.key ? ', key: true' : ''} },`).join('\n') +
+    '\n\n// User-added links\n' +
+    data.links.map(l => `  { source: '${l.source}', target: '${l.target}', type: '${l.type}' },`).join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.btn-export');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Export added people (copy)', 2000);
+  });
+}
+
+function updateAddedCount() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const el = document.getElementById('added-count');
+  if (!saved) { el.textContent = ''; return; }
+  const count = JSON.parse(saved).nodes.length;
+  el.textContent = count ? `${count} person${count > 1 ? 's' : ''} added locally` : '';
+}
+
+// Load saved people on startup
+loadUserNodes();
 
 // Initial zoom to fit
 setTimeout(() => {
