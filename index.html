@@ -593,8 +593,8 @@ function linkColor(d) {
   return getComputedStyle(document.documentElement).getPropertyValue('--link-parent').trim();
 }
 
-const link = g.append('g')
-  .selectAll('line')
+const linkGroup = g.append('g').attr('class', 'link-group');
+let link = linkGroup.selectAll('line')
   .data(links)
   .join('line')
   .attr('stroke', linkColor)
@@ -602,9 +602,10 @@ const link = g.append('g')
   .attr('stroke-dasharray', d => d.type === 'spouse' ? '4,5' : 'none')
   .attr('stroke-linecap', 'round');
 
+const nodeGroup = g.append('g').attr('class', 'node-group');
+
 // Nodes
-let node = g.append('g')
-  .selectAll('g')
+let node = nodeGroup.selectAll('g')
   .data(nodes)
   .join('g')
   .attr('cursor', 'pointer')
@@ -686,13 +687,17 @@ function showPanel(d) {
   const details = d.detail.length
     ? `<ul class="detail">${d.detail.map(x => `<li>${x}</li>`).join('')}</ul>`
     : '';
-  const deleteBtn = d.id.startsWith('usr_') ? `<button onclick="deletePerson('${d.id}')" style="margin-top:12px;padding:6px 14px;background:rgba(200,80,80,0.2);border:1px solid rgba(200,80,80,0.4);border-radius:4px;color:#c49a9a;font-size:12px;cursor:pointer">Remove</button>` : '';
+  const isUser = d.id.startsWith('usr_');
+  const editBtns = isUser ? `<div style="display:flex;gap:8px;margin-top:12px">
+    <button onclick="editPerson('${d.id}')" style="padding:6px 14px;background:rgba(196,149,106,0.2);border:1px solid rgba(196,149,106,0.4);border-radius:4px;color:var(--thomas);font-size:12px;cursor:pointer">Edit</button>
+    <button onclick="deletePerson('${d.id}')" style="padding:6px 14px;background:rgba(200,80,80,0.2);border:1px solid rgba(200,80,80,0.4);border-radius:4px;color:#c49a9a;font-size:12px;cursor:pointer">Remove</button>
+  </div>` : '';
   panel.innerHTML = `
     <span class="family-tag" style="background:${fam.dim};color:${fam.color}">${fam.label}</span>
     <div class="name" style="color:${fam.color}">${d.name}</div>
     <div class="dates">${d.dates || ''}</div>
     ${details}
-    ${deleteBtn}
+    ${editBtns}
   `;
   document.getElementById('info-panel').classList.add('open');
 
@@ -800,7 +805,12 @@ function populateLinkTargets() {
 populateLinkTargets();
 
 function toggleAddPanel() {
-  document.getElementById('add-panel').classList.toggle('open');
+  const panel = document.getElementById('add-panel');
+  if (panel.classList.contains('open')) {
+    resetAddForm();
+  } else {
+    panel.classList.add('open');
+  }
 }
 
 function addPerson() {
@@ -813,52 +823,88 @@ function addPerson() {
   const linkTarget = document.getElementById('add-link-target').value;
   const linkType = document.getElementById('add-link-type').value;
 
-  // Deduplicate IDs
-  let id = 'usr_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
-  let suffix = 0;
-  while (nodes.find(n => n.id === id)) { suffix++; id = id.replace(/_\d+$/, '') + '_' + suffix; }
+  if (editingId) {
+    // Update existing node
+    const existing = nodes.find(n => n.id === editingId);
+    if (existing) {
+      existing.name = name;
+      existing.family = family;
+      existing.dates = dates;
+      existing.detail = details;
+      existing.key = key;
+      if (linkTarget) {
+        existing.gen = linkType === 'parent'
+          ? (nodes.find(n => n.id === linkTarget)?.gen || 2) + 1
+          : (nodes.find(n => n.id === linkTarget)?.gen || 3);
+      }
+      // Remove old links for this node, add new one
+      for (let i = links.length - 1; i >= 0; i--) {
+        const sid = typeof links[i].source === 'object' ? links[i].source.id : links[i].source;
+        const tid = typeof links[i].target === 'object' ? links[i].target.id : links[i].target;
+        if ((sid === editingId || tid === editingId) && (sid.startsWith('usr_') || tid.startsWith('usr_'))) {
+          links.splice(i, 1);
+        }
+      }
+      if (linkTarget) {
+        links.push(linkType === 'parent'
+          ? { source: linkTarget, target: editingId, type: 'parent' }
+          : { source: editingId, target: linkTarget, type: 'spouse' });
+      }
+      // Update label in DOM
+      nodeGroup.selectAll('g').filter(d => d.id === editingId).select('text')
+        .text(() => { const p = name.split(' '); return p.length <= 2 ? name : p[0]+' '+p[p.length-1]; });
+    }
+    editingId = null;
+  } else {
+    // New node
+    let id = 'usr_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+    let suffix = 0;
+    while (nodes.find(n => n.id === id)) { suffix++; id = id.replace(/_\d+$/, '') + '_' + suffix; }
 
-  // Figure out generation from linked person
-  let gen = 3;
-  if (linkTarget) {
-    const parent = nodes.find(n => n.id === linkTarget);
-    if (parent) gen = linkType === 'parent' ? parent.gen + 1 : parent.gen;
-  }
+    let gen = 3;
+    if (linkTarget) {
+      const parent = nodes.find(n => n.id === linkTarget);
+      if (parent) gen = linkType === 'parent' ? parent.gen + 1 : parent.gen;
+    }
 
-  const newNode = { id, name, family, gen, dates, detail: details, key };
-  nodes.push(newNode);
-
-  if (linkTarget) {
-    const newLink = linkType === 'parent'
-      ? { source: linkTarget, target: id, type: 'parent' }
-      : { source: id, target: linkTarget, type: 'spouse' };
-    links.push(newLink);
+    nodes.push({ id, name, family, gen, dates, detail: details, key });
+    if (linkTarget) {
+      links.push(linkType === 'parent'
+        ? { source: linkTarget, target: id, type: 'parent' }
+        : { source: id, target: linkTarget, type: 'spouse' });
+    }
   }
 
   rebuildGraph();
   saveUserNodes();
+  resetAddForm();
+  updateAddedCount();
+}
 
-  // Reset form
+function resetAddForm() {
   document.getElementById('add-name').value = '';
   document.getElementById('add-dates').value = '';
   document.getElementById('add-details').value = '';
   document.getElementById('add-key').checked = false;
-  toggleAddPanel();
-  updateAddedCount();
+  document.getElementById('add-link-target').value = '';
+  document.querySelector('.btn-save').textContent = 'Add';
+  document.getElementById('add-panel').querySelector('h3').textContent = 'Add Person';
+  editingId = null;
+  document.getElementById('add-panel').classList.remove('open');
 }
 
 function rebuildGraph() {
-  // Rejoin links
-  const linkSel = g.select('g:first-child').selectAll('line').data(links);
-  linkSel.enter().append('line').merge(linkSel)
+  // Rejoin links — update module-level `link`
+  link = linkGroup.selectAll('line').data(links);
+  link.exit().remove();
+  link = link.enter().append('line').merge(link)
     .attr('stroke', linkColor)
     .attr('stroke-width', d => d.type === 'spouse' ? 1.2 : 2)
     .attr('stroke-dasharray', d => d.type === 'spouse' ? '4,5' : 'none')
     .attr('stroke-linecap', 'round');
 
-  // Rejoin nodes — update the module-level `node` variable
-  const nodeParent = g.select('g:nth-child(2)');
-  node = nodeParent.selectAll('g').data(nodes, d => d.id);
+  // Rejoin nodes — update module-level `node`
+  node = nodeGroup.selectAll('g').data(nodes, d => d.id);
   const enter = node.enter().append('g')
     .attr('cursor', 'pointer')
     .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
@@ -945,6 +991,41 @@ function updateAddedCount() {
   el.textContent = count ? `${count} person${count > 1 ? 's' : ''} added locally` : '';
 }
 
+let editingId = null;
+
+function editPerson(id) {
+  const person = nodes.find(n => n.id === id);
+  if (!person) return;
+  editingId = id;
+  closePanel();
+  document.getElementById('add-name').value = person.name;
+  document.getElementById('add-family').value = person.family;
+  document.getElementById('add-dates').value = person.dates || '';
+  document.getElementById('add-details').value = (person.detail || []).join('\n');
+  document.getElementById('add-key').checked = !!person.key;
+  // Find existing link
+  const existingLink = links.find(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    return tid === id || sid === id;
+  });
+  if (existingLink) {
+    const sid = typeof existingLink.source === 'object' ? existingLink.source.id : existingLink.source;
+    const tid = typeof existingLink.target === 'object' ? existingLink.target.id : existingLink.target;
+    if (existingLink.type === 'parent' && sid !== id) {
+      document.getElementById('add-link-target').value = sid;
+      document.getElementById('add-link-type').value = 'parent';
+    } else if (existingLink.type === 'spouse') {
+      document.getElementById('add-link-target').value = sid === id ? tid : sid;
+      document.getElementById('add-link-type').value = 'spouse';
+    }
+  }
+  // Change button text
+  document.querySelector('.btn-save').textContent = 'Update';
+  document.getElementById('add-panel').querySelector('h3').textContent = 'Edit Person';
+  document.getElementById('add-panel').classList.add('open');
+}
+
 function deletePerson(id) {
   const idx = nodes.findIndex(n => n.id === id);
   if (idx === -1) return;
@@ -956,10 +1037,7 @@ function deletePerson(id) {
     if (sid === id || tid === id) links.splice(i, 1);
   }
   closePanel();
-  // Remove DOM elements and rejoin
-  g.select('g:nth-child(2)').selectAll('g').data(nodes, d => d.id).exit().remove();
-  g.select('g:first-child').selectAll('line').data(links).exit().remove();
-  simulation.nodes(nodes);
+  rebuildGraph();
   simulation.force('link').links(links);
   simulation.alpha(0.3).restart();
   saveUserNodes();
