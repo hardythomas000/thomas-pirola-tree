@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Thomas–Pirola Family Tree</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0f0f12;
+    --bg-warm: #141318;
+    --text: #e8e4df;
+    --text-dim: #8a857e;
+    --thomas: #c4956a;
+    --thomas-dim: #6b5540;
+    --pirola: #7a9eb5;
+    --pirola-dim: #3d5563;
+    --gibson: #8db580;
+    --gibson-dim: #4a6342;
+    --barlow: #b5a0c4;
+    --barlow-dim: #5c4f6b;
+    --spalding: #c49a9a;
+    --spalding-dim: #6b4f4f;
+    --youl: #c4b96a;
+    --youl-dim: #6b6540;
+    --link: rgba(255,255,255,0.06);
+    --link-hover: rgba(255,255,255,0.18);
+    --link-parent: rgba(200,190,170,0.35);
+    --link-spouse: rgba(200,190,170,0.18);
+  }
+
+  .light-mode {
+    --bg: #f5f2ed;
+    --bg-warm: #eae6e0;
+    --text: #1a1510;
+    --text-dim: #55504a;
+    --thomas: #9a6d3f;
+    --thomas-dim: #d4b896;
+    --pirola: #4a7a90;
+    --pirola-dim: #a3c4d4;
+    --gibson: #5a8a50;
+    --gibson-dim: #b0d4a6;
+    --barlow: #7a5a94;
+    --barlow-dim: #c8b4d8;
+    --spalding: #945a5a;
+    --spalding-dim: #d4a8a8;
+    --youl: #8a8030;
+    --youl-dim: #d4cc8a;
+    --link-parent: rgba(60,50,40,0.3);
+    --link-spouse: rgba(60,50,40,0.15);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  svg { display: block; width: 100%; height: 100%; }
+
+  #info-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg-warm);
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 20px 24px 28px;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10;
+    max-height: 55vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #info-panel.open { transform: translateY(0); }
+  #info-panel .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+  #info-panel .dates {
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0.6;
+    margin-bottom: 12px;
+    letter-spacing: 0.04em;
+  }
+  #info-panel .detail {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text);
+    opacity: 0.85;
+    max-width: 640px;
+  }
+  #info-panel .detail li {
+    margin-bottom: 4px;
+    list-style: none;
+    padding-left: 12px;
+    position: relative;
+  }
+  #info-panel .detail li::before {
+    content: '·';
+    position: absolute;
+    left: 0;
+    color: var(--text-dim);
+  }
+  #info-panel .family-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+  #info-panel .close-btn {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: none; border: none;
+    color: var(--text-dim);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+  }
+
+  #header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 20px 24px 14px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  #header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+  }
+
+  #legend {
+    position: fixed;
+    top: 56px; left: 24px;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    pointer-events: auto;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 3px;
+    transition: background 0.2s;
+  }
+  .legend-item:hover { background: rgba(255,255,255,0.04); }
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  #controls {
+    position: fixed;
+    bottom: 16px; right: 16px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .ctrl-btn {
+    width: 36px; height: 36px;
+    background: var(--bg-warm);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+  .ctrl-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .ctrl-btn.theme-toggle { font-size: 14px; }
+
+  .node-label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 10px;
+    fill: var(--text-dim);
+    pointer-events: none;
+    text-anchor: middle;
+    letter-spacing: 0.02em;
+    paint-order: stroke;
+    stroke: var(--bg);
+    stroke-width: 3px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .node-label-main {
+    font-size: 12px;
+    fill: var(--text);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>THOMAS · PIROLA</h1>
+</div>
+
+<div id="legend"></div>
+
+<svg id="graph"></svg>
+
+<div id="info-panel">
+  <button class="close-btn" onclick="closePanel()">×</button>
+  <div id="panel-content"></div>
+</div>
+
+<div id="controls">
+  <button class="ctrl-btn" onclick="zoomIn()">+</button>
+  <button class="ctrl-btn" onclick="zoomOut()">−</button>
+  <button class="ctrl-btn" onclick="resetView()">⟲</button>
+  <button class="ctrl-btn theme-toggle" onclick="toggleTheme()" id="theme-btn">☀</button>
+</div>
+
+<script>
+const families = {
+  thomas: { color: '#c4956a', dim: '#6b5540', label: 'Thomas' },
+  pirola: { color: '#7a9eb5', dim: '#3d5563', label: 'Pirola' },
+  gibson: { color: '#8db580', dim: '#4a6342', label: 'Gibson' },
+  barlow: { color: '#b5a0c4', dim: '#5c4f6b', label: 'Barlow' },
+  spalding: { color: '#c49a9a', dim: '#6b4f4f', label: 'Spalding' },
+  youl: { color: '#c4b96a', dim: '#6b6540', label: 'Youl' },
+  other: { color: '#888', dim: '#555', label: 'Other' }
+};
+
+const nodes = [
+  // THOMAS deep ancestry
+  { id: 'rev_bart', name: 'Rev. Bartholomew Thomas', family: 'thomas', gen: 0, dates: 'Ireland', detail: ['Rector of Cloydagh, Queen\'s County, Ireland','Wife: Anna Jocelyn Davidson','Both sons emigrated to Tasmania — one became Colonial Treasurer, the other was killed in the Black War'] },
+  { id: 'jocelyn', name: 'Jocelyn H.C. Thomas', family: 'thomas', gen: 1, dates: '1780–1862', detail: ['Eton & Trinity College Dublin educated — Anglo-Irish gentry','In Ireland: agent for Lord Stanhope\'s estates. Leased Wexford Harbour to reclaim 1,100 acres from the sea','💥 "An unprecedented high tide destroyed in one hour the labour of more than seven years" — loss £40,000','Emigrated while poor. Arrived Tasmania 2 Feb 1824 on *Derwent* (NOT William Shand) with wife, 7 children, 3 servants','Colonial Treasurer of Van Diemen\'s Land 1825–32. Member of Executive Council.','💰 TREASURY SCANDAL: snap audit 23 Oct 1832 found £10,627 shortage. Admitted it but denied misappropriation — claimed unreported robberies. Dismissed.','Collector O\'Ferrall also dismissed — later convicted of FORGING DEEDS','All properties sold. Retired to sons\' homes. Lord Stanhope wrote: "His character is irreproachable"','Henry Savery described: "a hurried quickness in his manner, a sort of absentism... a little of the brogue"','A granddaughter remembered him walking "very erect" in the garden at North Down','40+ grandchildren at death. Charlotte died 13 Nov 1873.','⚡ The founding patriarch — everything traces back here','📖 ADB biography by H.R. Thomas (probably Harold Thomas, who also wrote "Sam Thomas and His Neighbours")'], key: true },
+  { id: 'capt_bart', name: 'Capt. Bartholomew B. Thomas', family: 'thomas', gen: 1, dates: '~1785–1831', detail: ['Military: Cornet 17th Light Dragoons, Lt 9th Light Dragoons. Resigned 1814.','⚔️ Later served under BOLÍVAR in South America','Arrived Tasmania 1826 on *Albion* with men, livestock, machinery. More than half the horses died on voyage.','Schooner *Sally* wrecked near Ringarooma — 13 lives lost + uninsured machinery','Founded Cressy Company (£24,000 capital). Named after battlefield where ancestor was "created Knight Banneret"','Partnership dissolved after financial chaos. Became "first settler in Devon"','Established North Down — 2,200 acres west of Port Sorell','🕊️ Uniquely established FRIENDLY RELATIONS with local Aboriginal tribes while most of island saw killings','⚔️ SPEARED TO DEATH 31 Aug 1831 by a hostile tribe from the south, along with overseer Parker','ADB: "Imaginative, impulsive and altruistic... generous and likeable... physically uncommonly active"','Married Louisa 1811 — no children. Louisa mothered sister Marianne Burrell\'s 4 orphaned children','Widow Louisa died at Stoke Damerel, Devon, England, 12 Apr 1862','North Down property STILL in hands of Jocelyn\'s descendants today'] },
+  { id: 'charlotte_p', name: 'Charlotte Partridge', family: 'other', gen: 1, dates: '', detail: ['Daughter of the Chief Justice of Ely','Married Jocelyn 11 Apr 1808','Made the voyage to Van Diemen\'s Land with 7 children'] },
+
+  // Gen 2
+  { id: 'bat', name: '"Bat" Thomas', family: 'thomas', gen: 2, dates: '', detail: ['Bartholomew John William Thomas','Granted 500 acres on South Esk (became Milford)','Established "Appledore" estate west of River Mersey, 1854','🍎 THIS is the Thomas apple farm — orchards of apples, pears, apricots, cherries','His journals survive — held by University of Tasmania?','❓ Did his line stay entirely in Tasmania?'] },
+  { id: 'samuel', name: 'Samuel H.L. Thomas', family: 'thomas', gen: 2, dates: '1813–1883', detail: ['Samuel Henry Leipsig Thomas — born England','Married Barbara Moore (1820–1861, Dublin) — she died young at 41','🔑 KEY ANCESTOR: his wife\'s maiden name MOORE is the source of Patrick\'s middle name "Moor(e)"','Had son Owen who moved to Hillston, NSW — "Sam had too many sons"','Also had son Turton who stayed in Tasmania','❓ How many other children did Samuel have? Three of Jocelyn\'s sons are completely untraced'], key: true },
+  { id: 'barbara_moore', name: 'Barbara Moore', family: 'other', gen: 2, dates: '1820–1861', detail: ['Born Summer Hill, Dublin, Ireland','Died young, age 41','🔑 Her maiden name MOORE passed down as Patrick\'s middle name — a common Australian naming convention','❓ What were the circumstances of her early death?'] },
+
+  // Gen 3
+  { id: 'owen', name: 'Owen Thomas', family: 'thomas', gen: 3, dates: '', detail: ['Son of Samuel — the one who left Tasmania','Married Phyllis Youl (prominent early Tasmanian family)','Moved to HILLSTON, NSW (inland NSW, near Hay) — land was cheaper, "Sam had too many sons"','❓ Exact dates unknown — probably late 19th century','❓ Was it purely economics, or was there a family dispute?'], key: true },
+  { id: 'phyllis', name: 'Phyllis Youl', family: 'youl', gen: 3, dates: '', detail: ['Youl family were prominent in early Tasmania','Also connected to the Loane family (Archbishop Marcus Loane was a Thomas descendant)','Her marriage to Owen connects two founding Tasmanian families'] },
+  { id: 'turton', name: 'Turton Samuel Thomas', family: 'thomas', gen: 3, dates: '1846–1914', detail: ['Stayed in Tasmania (Norwood)','Married Kate Gertrude Douglas','His grandson Jocelyn Langslow Thomas (1886–1961) had 8 children who mostly stayed in Tasmania','This is the branch that kept the Appledore/North Down connection alive'] },
+
+  // Gen 4 — Owen's children
+  { id: 'ken', name: 'Ken Thomas', family: 'thomas', gen: 4, dates: '', detail: ['Oldest of the three brothers','Owned farm "Lancoona" outside Hillston, NSW','Initially thought to be Kenneth William Thomas (1913–1997), founder of TNT freight — but that\'s a DIFFERENT family','❓ Birth/death dates unknown','❓ Did he have children? What happened to Lancoona?'] },
+  { id: 'patrick', name: 'Patrick Moor(e) Thomas', family: 'thomas', gen: 4, dates: '1917–2012', detail: ['Born 12 Jul 1917 — died 17 Aug 2012 (aged 95!)','Grew up in Hillston, NSW (not Yass as initially thought)','Married Jean Gibson, 28 Dec 1922 – 3 Mar 2000','Moved to Wollongong — ran engineering business supplying BHP with mining equipment','Middle name "Moor(e)" traces back 4 generations to great-grandmother Barbara Moore of Dublin','Five children: Gregory, Michael, Peter, Cate, Robin','❓ What was the engineering business called? No online trace found','📖 Featured in "Sam Thomas and His Neighbours" by Harold Thomas (1970s)'], key: true },
+  { id: 'frank', name: 'Capt. O.F.Y. Thomas', family: 'thomas', gen: 4, dates: 'd. 23 Mar 1946', detail: ['Full name: Captain Owen Frank Youl Thomas','One of Qantas\'s EARLIEST pilots','✈️ WWII: civilian pilot ferrying people to/from OCCUPIED SINGAPORE in a float plane — extraordinary wartime role','Commanded Avro Lancastrian G-AGLX on Kangaroo Route (London–Sydney)','✈️ DISAPPEARED over the Indian Ocean, 23 March 1946, en route Ceylon → Cocos Islands','10 on board including Jack Dobson (son of Avro\'s managing director)','NO wreckage, bodies, or debris EVER found — one of aviation\'s enduring mysteries','A "faint undecipherable signal, possibly from a dinghy transmitter" was detected 130 miles from last position','Middle name "Youl" — from his grandmother Phyllis Youl','🗞️ Newspaper account of his death exists (Trove: West Australian, 26 Mar 1946)','❓ His RAAF service records at National Archives would reveal his full wartime story'] },
+
+  // Jean Gibson
+  { id: 'jean', name: 'Jean Gibson', family: 'gibson', gen: 4, dates: '1922–2000', detail: ['Born 28 Dec 1922 — died 3 Mar 2000','Descended from the Gibson sugar dynasty of Queensland','🏭 CONTROVERSY: The Gibsons used Kanaka labour (South Sea Islanders kidnapped from their homes) on their plantations','The Gibson family were noted for providing "some of the WORST conditions" for these workers','William Gibson Snr arrived Brisbane 1863 from Kilmaurs, Scotland','Built Clydesdale Mill 1868, Bingera Plantation 1883 (1,318 acres)','Angus Gibson was member of QLD Legislative Council','Company became Gibson & Howes → merged with Fairymead → Bundaberg Sugar Company','❓ Exact position in Gibson family tree needs clarification from Gregory'] },
+
+  // Gen 5 — Patrick's children
+  { id: 'gregory', name: 'Gregory Thomas', family: 'thomas', gen: 5, dates: '', detail: ['Born PHILLIP THOMAS — three names over his life: Phillip (birth) → Faisal (Subud) → Gregory (current)','Attended Scots College, Sydney (day boarding) with brother Michael','🧬 AncestryDNA: 57% Celtic/Gaelic (Scotland/Ireland), 40% English (West Midlands, Devon), 3% Nordic (Denmark)','Ancestral journeys detected: Tasmania British Settlers, Scotland Central Belt, SW Scotland/N. Ulster','Confirms BOTH lines: Thomas (Irish/Tasmanian) and Gibson (Scottish/QLD)','Father of Hardy Thomas'], key: true },
+  { id: 'michael_t', name: 'Michael Thomas', family: 'thomas', gen: 5, dates: '', detail: ['Attended Scots College Sydney with brother Gregory','❓ Where is Michael now? Married name? Children?'] },
+  { id: 'peter_t', name: 'Peter Thomas', family: 'thomas', gen: 5, dates: 'd. young', detail: ['💔 Died young from heroin overdose','Was incarcerated in Wollongong or Sydney area','❓ Approximate year of death unknown — even the decade would help for records','❓ No online trace found (common name + pre-internet death)'] },
+  { id: 'cate', name: 'Cate Thomas', family: 'thomas', gen: 5, dates: '', detail: ['Daughter of Patrick and Jean','❓ Married name? Where does she live?'] },
+  { id: 'robin', name: 'Robin Thomas', family: 'thomas', gen: 5, dates: '', detail: ['Daughter of Patrick and Jean','❓ Married name? Where does she live?'] },
+
+  // PIROLA deep ancestry
+  { id: 'luigi_gg', name: 'Luigi Pirola (Sondrio)', family: 'pirola', gen: 0, dates: 'Sondrio, Italy', detail: ['Great-great-grandfather — cheesemaker from SONDRIO','🏔️ Sondrio: northernmost valleys of Italy, near Swiss border','There is a LAKE PIROLA near Sondrio (~2,000m altitude) — no one knows how it got the name','Had 17 CHILDREN','1,956 Pirola families in Italy, 1,710 in Lombardy','Name may originally have come from Spain'] },
+  { id: 'luigi_g', name: 'Luigi Pirola (Milan)', family: 'pirola', gen: 1, dates: '', detail: ['6th of 17 children — also named Luigi (family tradition)','Also a cheesemaker, married Maria Rinaldi','Described as "mild-mannered, very absent-minded" — took the tram in his SLIPPERS','~1930: moved to Milan, ran "highly successful grocery business"','Built family mausoleum in cemetery — still in use','Five sisters became nuns; aunt Matilda lived in enclosed Jerusalem convent','🏠 40% of Milan carpet bombed last 3 days of WWII — bombs stopped at the WALL of their building'] },
+  { id: 'maria_r', name: 'Maria Rinaldi', family: 'other', gen: 1, dates: '', detail: ['From neighbouring town to Sondrio','"Very demanding woman, with a sharp temper" — opposite of her mild husband','Survived the Milan bombings — their building miraculously untouched'] },
+
+  // Gino Sr
+  { id: 'gino_sr', name: 'Luigi "Gino" Pirola', family: 'pirola', gen: 2, dates: '~1905–2002', detail: ['🦁 Nickname at work: "THE LION" — because he roared','His chairman said: "I could send this man into the Sahara Desert without a shirt on his back and he would come back with a new market"','At 12 during WWI, left school to be a delivery boy — proudest moment: first pay packet on mother\'s kitchen table','Army: laid telephone lines in Alps, accomplished BOXER (fast reflexes)','Worked at Chatillon textiles → Italviscosa (3rd largest in world after Courtalds & DuPont)','Honoured with "Stella di Lavoro" (Star of Work) by Italian Government','Met Grace Barlow in France — he spoke no English, she no Italian. Only common language: FRENCH','📍 Barcelona 1932 → Mexico City 1936 → Milan 1939 → Sydney 1939 → Shanghai → Hong Kong → Europe → Australia 1950','✈️ Shanghai 1949: British frigate left without them in the night. Grace got 6 plane tickets at the LAST airline she tried. Got on the last plane as evening fell.','A Chinese man waving a gold bar was turned away at the plane steps','🗞️ 1948 Shanghai newspaper: "Italian Luigi Pirola arrested over currency regulations"','🗞️ 1955 Tokyo: "Luigi Pirola, Italian businessman from Milan" mentioned near Air India crash','Naturalized Australian 30 Jun 1955 (Commonwealth Gazette)','First in family to have an EMAIL ADDRESS','In late 80s, mastered microwave cooking in TWO WEEKS','Philosophy courses at Sydney University in his early 90s','After Grace died (age 62, in her sleep), remarried Patricia Hildebrandt — 25 years together','💀 Died of HEART ATTACK at the transport department trying to renew his driver\'s licence, just before turning 97','Former family home in Roseville is now the Australian headquarters of Opus Dei'], key: true },
+  { id: 'paolo', name: 'Paolo Pirola', family: 'pirola', gen: 2, dates: '', detail: ['Gino Sr\'s brother — took over father\'s grocery in Milan','💍 SCANDAL: married Lina from Calabria — "for a Milanese to marry a Southerner was a major disgrace"','Grandparents didn\'t attend the wedding and cut off contact for years','⚔️ WWII: fought in Russia with German/Italian forces. When defeated, WALKED BACK across Europe in winter alone','Arrived at parents\' door in Milan — his mother took one look at him and slammed the door','Later reconciled; Lina nursed the parents in old age','Children: Bruno (lives mainly in Brazil), Lydia (married Gianfelice — his mother represented Italy in Olympic equestrian!)'] },
+  { id: 'alice_p', name: 'Alice Pirola', family: 'pirola', gen: 2, dates: '', detail: ['Gino Sr\'s sister — married Gigi from Piedmont','Two sons: Franco and Mario','💔 Franco developed severe depression and took his own life, leaving wife Laura with children Claudia and Massimo','Mario married Anna — passed away recently with heart and lung disease','Distant cousins in Pescara: Danelli and Valentini families'] },
+
+  // Grace Barlow
+  { id: 'grace', name: 'Grace Barlow', family: 'barlow', gen: 2, dates: '~1910–~1972', detail: ['⚠️ Surname is BARLOW, not "Bailor" (corrected from Ron\'s reunion document)','🌍 Spoke FIVE languages: Italian, French, German, Spanish, English','🎨 Artistic: oil painting, poetry. Loved opera and Strauss waltzes','Both her brothers (Arthur Charles and Stanley) were KILLED in WWI','Both parents died fairly young — six children dispersed to different relatives','As teenager, worked in London doctor\'s home. Fell on stairs, injured back','Sent to SWITZERLAND: Prof Auguste Rollier\'s famous sanatorium at Leysin','Stayed and worked there, studied at Louvain University (Belgium)','Child-minding in France — where she met Gino. No common language except French','High Church of England → converted to Catholic, later immersed in Spanish spirituality','😔 Developed mental health issues from ~1940s (paranoia — "communists under the bed")','Possible neurological condition (gait similar to daughter Gaie\'s later MS)','Improved in her 60s with new medications','During the war: slept with a REVOLVER under her pillow when Gino was away','In Mexico City: secretly taught religion classes in the BASEMENT while priests were being hanged in the streets','Died peacefully in her sleep, age 62. Buried Macquarie Park Cemetery.','Stepsister Jessie met in London ~1990 — Jessie felt Grace had "abandoned" her','❓ "Bailor" surname extremely rare (only 15 people in England) — actually BARLOW (common). Previous research on Bailor was a dead end.'], key: true },
+
+  // Frederick Barlow line
+  { id: 'fred_barlow', name: 'Frederick Barlow', family: 'barlow', gen: 0, dates: 'Nottingham', detail: ['⚓ Sea captain from Nottingham, English midlands','Died young, leaving wife Sarah and son Arthur','❓ No dates known — FreeBMD and NAA naturalization file would help'] },
+  { id: 'sarah_r', name: 'Sarah Ratcliffe', family: 'barlow', gen: 0, dates: 'Cambridgeshire', detail: ['From Cambridgeshire','Married Frederick Barlow','❓ What happened to her after Frederick died young?'] },
+  { id: 'arthur_b', name: 'Arthur C.R. Barlow', family: 'barlow', gen: 1, dates: '', detail: ['Arthur Charles Radcliffe Barlow','💍 Married TWICE — both times to LANGLEY SISTERS','1st wife: Jessica Cornelia Langley → daughter Jessie → Jessica died','2nd wife: Frances Elizabeth Langley (Fanny) — married his dead wife\'s sister','Fanny had 5 children: Florence May, Violet, GRACE, Arthur Charles, Stanley','⚔️ BOTH SONS (Arthur Charles and Stanley) killed at start of WWI','Both Arthur and Fanny died fairly young — six children from both marriages scattered to different relatives','A family of early death and dispersal — Grace grew up without parents'] },
+
+  // Gino Jr
+  { id: 'gino_jr', name: 'Gino Pirola Jr', family: 'pirola', gen: 3, dates: '1933–~1982', detail: ['Born 1933, BARCELONA, Spain (parents\' 4-year posting for Chatillon)','Anglicized to "George" on arrival in Australia — enemy alien during WWII','🔥 Short, red-headed, rebellious — "THE GUY WITH ALL THE PIZZAZ"','💃 Would dance on restaurant tables to the applause of friends','🏍️ Famous RED MOTOR SCOOTER on Sydney Harbour Bridge — train commuters watched for him every morning, zig-zagging through peak hour at top speed','Ron: "unquestionably the best driver I have ever known"','Fought with his intense father constantly ("not a good mix")','Grace (his mother) "always understood him better and took his side"','⚡ Worked at E.P.T. then Transfield — Italian companies that built the SNOWY SCHEME power lines','Popular, innovative — no engineering training but better ideas than the engineers','💍 Married Roma Spalding, Melbourne, December 1958','Parents of FOUR children (including Hanna/Anna)','💀 Died suddenly at age 49','❓ MYSTERY: "Luigi Ignatius Pirola" (d. 26 Mar 1982, Macquarie Park) — same cemetery, same year. Was this his legal name?','📖 Researcher Matthew Quomi writing book about E.P.T./Transfield, contacted family 2026'], key: true },
+
+  // Roma Spalding
+  { id: 'roma', name: 'Roma Spalding', family: 'spalding', gen: 3, dates: '', detail: ['Known as ROMA SPALDING (confirmed by Hanna Thomas, March 2026)','💡 Her name was the single biggest mystery — completely unknown until Hanna confirmed it','🔍 NEW: Mother was Sylvia Verona TRIBE (née Spalding). Father: Cecil TRIBE (first name uncertain)','❓ So was her birth name Roma TRIBE? "Spalding" is her mother\'s maiden name — did Roma use it instead?','Received Subud name "Haryanti" through latihan practice','💍 Married (1) Gino Pirola Jr, Melbourne, December 1958 — parents of four','💍 Married (2) Michael (Mutalib) YOUNG — "Mutalib" is a Subud name','💍 Married (3) Mr. Stuart — took surname Stuart','Long-time Subud Voice subscriber in Australia','❓ Hanna checking records for more on the Tribe/Spalding family'] },
+
+  // Ron
+  { id: 'ron', name: 'Dr. Ron Pirola OAM', family: 'pirola', gen: 3, dates: 'b. Sep 1936', detail: ['Born September 1936, MEXICO CITY','📜 Birth certificate: dated "Year of the Reform 359" — Mexican revolutionary calendar designed to erase Christianity','Conceived in Chile, traveled 26,000 km in mother\'s womb before being born','Mother slept with a REVOLVER under her pillow — Mexico was violent','Scraped into Sydney Uni at 15 (only 11 years of schooling in those days)','Met Mavis at a uni party he almost didn\'t attend — "instant attraction"','Perth 4 years → Sydney → London → New York 3 years → Sydney','🔬 Co-founded Pancreatic Research Group UNSW 1981. 100+ publications.','Introduced Marriage Encounter and Antioch Youth Movement to Australia','⛪ Pontifical Council for the Family: 27 years, 3 Popes, annual trips to Rome','Honours: OAM (1997), Knight of St Gregory (1998), Honorary Doctorate ACU (2016)','Pope Francis honoured Ron, Mavis, Byron, and Francine at St Mary\'s Cathedral 2019','4 children: Byron (EY partner), Teresa, Claire, Tina (born in London)','At 86 (2023): "I\'m only doing one thing and that is pancreatic research"','✍️ Wrote the 18-page "Australian Pirola Family" document for the June 2023 reunion — the primary source for this entire Pirola tree'] },
+  { id: 'gaie', name: 'Gaie Pirola', family: 'pirola', gen: 3, dates: '', detail: ['"Looked like Elizabeth Taylor" — bright, vivacious, thoroughly spoilt by her father','💍 Married son of a SHIPPING MAGNATE in New York. 2 sons. Divorced, then widowed.','🏥 Age ~29: diagnosed with MULTIPLE SCLEROSIS (usually fatal in 5 years in those days)','🙏 Went to a prayer healing service one night — disease has remained STATIC ever since','Moved to Arizona (near TOMBSTONE, of cowboy fame) for dry climate','💍 Married an American war veteran who developed paraplegia','💔 Husband hit by car while crossing road in his wheelchair — died','Two days later, Gaie had a HEART ARRHYTHMIA → permanent brain damage','Now in aged care in Phoenix, Arizona. Remembers very little.','Byron Pirola (Ron\'s son) is her guardian','❓ What happened to her two sons from the New York marriage?'] },
+  { id: 'mark_p', name: 'Mark Pirola', family: 'pirola', gen: 3, dates: '~1945–1995', detail: ['Youngest — sent to boarding school ST IGNATIUS during Grace\'s mental health crisis','🏈 Big, strapping, outstanding footballer at school','🚣 Won school rowing regatta — first in St Ignatius HISTORY','🇺🇸 Fordham University, New York — football + nearly qualified for US OLYMPIC fours rowing team','Met and married MaryJo at Fordham','Settled Australia — 7 children (one, Joey, died in infancy with congenital heart problems)','📊 Became MARKETING MANAGER of BHP — Australia\'s biggest company','Deliberately gave up BHP for a quieter role to immerse in faith','Lived in Manila (took family to slums on Sunday mornings) then Melbourne','💀 Died age 51 — HEART ATTACK at the gym after work','Ron: "it was a devastating shock"','🪦 Buried Cheltenham, VIC. MaryJo (1945–2004) buried same plot. Baby Joey at Brighton.','❓ Who are the other 6 children? Belinda Pirola (1979–2024, Springvale VIC) may be one'] },
+
+  // Gen 5 — Hardy's generation
+  { id: 'hanna', name: 'Hanna Thomas', family: 'pirola', gen: 4, dates: '', detail: ['Born ANNA PIROLA — three names: Anna (birth) → Halimah (Subud) → Hanna (current)','Daughter of Gino Jr and Roma Spalding','One of FOUR children','Married Gregory Thomas (born Phillip Thomas)','Currently researching family history — her responses in March 2026 unlocked key mysteries','Confirmed Roma Spalding as her mother\'s birth name','Forwarded Matthew Quomi\'s research about her father + Ron\'s reunion document'] },
+  { id: 'hardy', name: 'Hardy Thomas', family: 'thomas', gen: 6, dates: '', detail: ['🏠 Gold Coast, QLD, Australia','⚙️ CAM Programmer — 3/4/5-axis milling, Mastercam','Wife: Noor Julaiha (Indonesian, not Subud)','Children: Benjamin, Noor Julaiha, Leonard Djata','🌏 Moving to Palangka Raya, Central Kalimantan, Indonesia — July 2026','🔬 The one who started all this genealogy research in March 2026','Heritage: Irish → Tasmanian → NSW (Thomas) + Scottish → QLD (Gibson) + Italian/Lombardy (Pirola) + English/Nottingham (Barlow) + English (Spalding) + Indonesian (Noor Julaiha)'], key: true },
+  { id: 'noor', name: 'Noor Julaiha', family: 'other', gen: 6, dates: '', detail: ['Indonesian','Not Subud — despite the Javanese-sounding name','❓ Noor Julaiha\'s Indonesian family line completely unresearched'] },
+
+  // Gibson ancestors
+  { id: 'wm_gibson', name: 'William Gibson Snr', family: 'gibson', gen: 0, dates: '1813–1902', detail: ['Born KILMAURS, Scotland, 1813','Married Mary McAllister, Kilmarnock, 1838','4 sons (Angus, William Jr, James, John) + 3 daughters — all born Scotland','1863: Father + eldest son Angus sailed to Brisbane on Cairngorm','1864: rest of family followed on Warren Hastings (120-DAY voyage!)','Settled Doughboy Creek on Brisbane River — cleared land by hand','🏭 1866: started sugar with cane plants from Hon. Louis Hope of Ormiston','1867: floating sugar mill "Walrus" crushed their first crop','1868: built CLYDESDALE MILL at Hemmant — wooden rollers, horse-powered','1883: acquired 1,318 acres at Bundaberg → BINGERA PLANTATION','⚠️ CONTROVERSY: Used KANAKA labour — South Sea Islanders stolen from their homes','The Gibsons were noted for providing "some of the WORST conditions" for these workers','This is the dark side of the Gibson sugar fortune','Angus became member of QLD Legislative Council; two brothers were Methodist preachers','Company → Gibson & Howes → Fairymead → Bundaberg Sugar Company','Died age 89 at Bingera, December 1902','📖 Robert Campbell Gibson (4th gen) wrote "The Gibson Family\'s Early Years 1863–1943"'] },
+  { id: 'mary_mca', name: 'Mary McAllister', family: 'gibson', gen: 0, dates: '', detail: ['From Kilmarnock, Scotland','Married William Gibson 1838','Arrived Brisbane June 1864 on Warren Hastings — 120 DAYS at sea with 3 sons and 2 daughters','Youngest son John was only 6 years old on the voyage'] },
+];
+
+const links = [
+  // Thomas ancestry
+  { source: 'rev_bart', target: 'jocelyn', type: 'parent' },
+  { source: 'rev_bart', target: 'capt_bart', type: 'parent' },
+  { source: 'jocelyn', target: 'charlotte_p', type: 'spouse' },
+  { source: 'jocelyn', target: 'bat', type: 'parent' },
+  { source: 'jocelyn', target: 'samuel', type: 'parent' },
+  { source: 'samuel', target: 'barbara_moore', type: 'spouse' },
+  { source: 'samuel', target: 'owen', type: 'parent' },
+  { source: 'samuel', target: 'turton', type: 'parent' },
+  { source: 'owen', target: 'phyllis', type: 'spouse' },
+  { source: 'owen', target: 'ken', type: 'parent' },
+  { source: 'owen', target: 'patrick', type: 'parent' },
+  { source: 'owen', target: 'frank', type: 'parent' },
+  { source: 'patrick', target: 'jean', type: 'spouse' },
+  { source: 'patrick', target: 'gregory', type: 'parent' },
+  { source: 'patrick', target: 'michael_t', type: 'parent' },
+  { source: 'patrick', target: 'peter_t', type: 'parent' },
+  { source: 'patrick', target: 'cate', type: 'parent' },
+  { source: 'patrick', target: 'robin', type: 'parent' },
+
+  // Pirola ancestry
+  { source: 'luigi_gg', target: 'luigi_g', type: 'parent' },
+  { source: 'luigi_g', target: 'maria_r', type: 'spouse' },
+  { source: 'luigi_g', target: 'gino_sr', type: 'parent' },
+  { source: 'luigi_g', target: 'paolo', type: 'parent' },
+  { source: 'luigi_g', target: 'alice_p', type: 'parent' },
+  { source: 'gino_sr', target: 'grace', type: 'spouse' },
+  { source: 'gino_sr', target: 'gino_jr', type: 'parent' },
+  { source: 'gino_sr', target: 'ron', type: 'parent' },
+  { source: 'gino_sr', target: 'gaie', type: 'parent' },
+  { source: 'gino_sr', target: 'mark_p', type: 'parent' },
+  { source: 'gino_jr', target: 'roma', type: 'spouse' },
+  { source: 'gino_jr', target: 'hanna', type: 'parent' },
+
+  // Barlow ancestry
+  { source: 'fred_barlow', target: 'sarah_r', type: 'spouse' },
+  { source: 'fred_barlow', target: 'arthur_b', type: 'parent' },
+  { source: 'arthur_b', target: 'grace', type: 'parent' },
+
+  // Gibson ancestry
+  { source: 'wm_gibson', target: 'mary_mca', type: 'spouse' },
+  { source: 'wm_gibson', target: 'jean', type: 'parent' },
+
+  // Hardy's parents + Hardy
+  { source: 'gregory', target: 'hanna', type: 'spouse' },
+  { source: 'gregory', target: 'hardy', type: 'parent' },
+  { source: 'hardy', target: 'noor', type: 'spouse' },
+];
+
+// Build
+const width = window.innerWidth;
+const height = window.innerHeight;
+
+const svg = d3.select('#graph')
+  .attr('width', width)
+  .attr('height', height);
+
+const defs = svg.append('defs');
+
+// Glow filter
+const filter = defs.append('filter').attr('id', 'glow');
+filter.append('feGaussianBlur').attr('stdDeviation', 3).attr('result', 'blur');
+const merge = filter.append('feMerge');
+merge.append('feMergeNode').attr('in', 'blur');
+merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+const g = svg.append('g');
+
+const zoom = d3.zoom()
+  .scaleExtent([0.15, 4])
+  .on('zoom', (e) => g.attr('transform', e.transform));
+
+svg.call(zoom);
+
+// Simulation
+const simulation = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(d => d.id).distance(d => d.type === 'spouse' ? 50 : 80).strength(d => d.type === 'spouse' ? 1.2 : 0.6))
+  .force('charge', d3.forceManyBody().strength(-320))
+  .force('center', d3.forceCenter(width / 2, height / 2))
+  .force('y', d3.forceY(d => 100 + d.gen * 90).strength(0.12))
+  .force('collision', d3.forceCollide(30))
+  .alphaDecay(0.012);
+
+// Links
+function linkColor(d) {
+  if (d.type === 'spouse') return getComputedStyle(document.documentElement).getPropertyValue('--link-spouse').trim();
+  return getComputedStyle(document.documentElement).getPropertyValue('--link-parent').trim();
+}
+
+const link = g.append('g')
+  .selectAll('line')
+  .data(links)
+  .join('line')
+  .attr('stroke', linkColor)
+  .attr('stroke-width', d => d.type === 'spouse' ? 1.2 : 2)
+  .attr('stroke-dasharray', d => d.type === 'spouse' ? '4,5' : 'none')
+  .attr('stroke-linecap', 'round');
+
+// Nodes
+const node = g.append('g')
+  .selectAll('g')
+  .data(nodes)
+  .join('g')
+  .attr('cursor', 'pointer')
+  .call(d3.drag()
+    .on('start', dragstarted)
+    .on('drag', dragged)
+    .on('end', dragended));
+
+// Node circles
+node.append('circle')
+  .attr('r', d => d.key ? 10 : d.id === 'hardy' ? 12 : 7)
+  .attr('fill', d => families[d.family]?.color || '#888')
+  .attr('stroke', d => d.key ? families[d.family]?.color || '#888' : 'none')
+  .attr('stroke-width', d => d.key ? 2 : 0)
+  .attr('stroke-opacity', 0.3)
+  .attr('fill-opacity', d => d.key ? 1 : 0.7)
+  .style('filter', d => d.id === 'hardy' ? 'url(#glow)' : 'none');
+
+// Outer ring for Hardy
+node.filter(d => d.id === 'hardy')
+  .append('circle')
+  .attr('r', 18)
+  .attr('fill', 'none')
+  .attr('stroke', families.thomas.color)
+  .attr('stroke-width', 1)
+  .attr('stroke-opacity', 0.2)
+  .attr('stroke-dasharray', '2,3');
+
+// Labels
+node.append('text')
+  .attr('class', d => d.key || d.id === 'hardy' ? 'node-label node-label-main' : 'node-label')
+  .attr('dy', d => (d.key || d.id === 'hardy') ? -16 : -12)
+  .text(d => {
+    const parts = d.name.split(' ');
+    if (parts.length <= 2) return d.name;
+    // Abbreviate: first name + last name
+    return parts[0] + ' ' + parts[parts.length - 1];
+  });
+
+// Click handler
+node.on('click', (event, d) => {
+  event.stopPropagation();
+  showPanel(d);
+});
+
+svg.on('click', () => closePanel());
+
+// Simulation tick
+simulation.on('tick', () => {
+  link
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+
+  node.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+
+// Drag handlers
+function dragstarted(event) {
+  if (!event.active) simulation.alphaTarget(0.3).restart();
+  event.subject.fx = event.subject.x;
+  event.subject.fy = event.subject.y;
+}
+function dragged(event) {
+  event.subject.fx = event.x;
+  event.subject.fy = event.y;
+}
+function dragended(event) {
+  if (!event.active) simulation.alphaTarget(0);
+  event.subject.fx = null;
+  event.subject.fy = null;
+}
+
+// Panel
+function showPanel(d) {
+  const fam = families[d.family] || families.other;
+  const panel = document.getElementById('panel-content');
+  const details = d.detail.length
+    ? `<ul class="detail">${d.detail.map(x => `<li>${x}</li>`).join('')}</ul>`
+    : '';
+  panel.innerHTML = `
+    <span class="family-tag" style="background:${fam.dim};color:${fam.color}">${fam.label}</span>
+    <div class="name" style="color:${fam.color}">${d.name}</div>
+    <div class="dates">${d.dates || ''}</div>
+    ${details}
+  `;
+  document.getElementById('info-panel').classList.add('open');
+
+  // Highlight connections
+  const connected = new Set();
+  links.forEach(l => {
+    const sid = typeof l.source === 'object' ? l.source.id : l.source;
+    const tid = typeof l.target === 'object' ? l.target.id : l.target;
+    if (sid === d.id) connected.add(tid);
+    if (tid === d.id) connected.add(sid);
+  });
+  connected.add(d.id);
+
+  node.select('circle:first-child')
+    .transition().duration(300)
+    .attr('fill-opacity', n => connected.has(n.id) ? 1 : 0.12);
+
+  link.transition().duration(300)
+    .attr('stroke-opacity', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 1 : 0.06;
+    })
+    .attr('stroke-width', l => {
+      const sid = typeof l.source === 'object' ? l.source.id : l.source;
+      const tid = typeof l.target === 'object' ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 3 : (l.type === 'spouse' ? 1.2 : 2);
+    });
+
+  node.selectAll('.node-label')
+    .transition().duration(300)
+    .attr('fill-opacity', n => connected.has(n.id) ? 1 : 0.15);
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('open');
+  node.select('circle:first-child')
+    .transition().duration(400)
+    .attr('fill-opacity', d => d.key ? 1 : 0.7);
+  link.transition().duration(400)
+    .attr('stroke-opacity', 1)
+    .attr('stroke-width', d => d.type === 'spouse' ? 1.2 : 2);
+  node.selectAll('.node-label')
+    .transition().duration(400)
+    .attr('fill-opacity', 1);
+}
+
+// Legend
+const legendEl = document.getElementById('legend');
+Object.entries(families).forEach(([key, val]) => {
+  if (key === 'other') return;
+  const el = document.createElement('div');
+  el.className = 'legend-item';
+  el.innerHTML = `<span class="legend-dot" style="background:${val.color}"></span>${val.label}`;
+  el.onclick = () => {
+    const matching = nodes.filter(n => n.family === key);
+    if (matching.length) {
+      const cx = matching.reduce((s, n) => s + n.x, 0) / matching.length;
+      const cy = matching.reduce((s, n) => s + n.y, 0) / matching.length;
+      svg.transition().duration(700).call(
+        zoom.transform,
+        d3.zoomIdentity.translate(width/2 - cx, height/2 - cy).scale(1.2)
+      );
+    }
+  };
+  legendEl.appendChild(el);
+});
+
+// Controls
+function zoomIn() {
+  svg.transition().duration(300).call(zoom.scaleBy, 1.4);
+}
+function zoomOut() {
+  svg.transition().duration(300).call(zoom.scaleBy, 0.7);
+}
+function resetView() {
+  svg.transition().duration(600).call(
+    zoom.transform,
+    d3.zoomIdentity.translate(0, 0).scale(1)
+  );
+}
+
+// Theme toggle
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  const isLight = document.body.classList.contains('light-mode');
+  document.getElementById('theme-btn').textContent = isLight ? '☾' : '☀';
+  // Update link colors
+  link.attr('stroke', linkColor);
+  // Update node label fills
+  node.selectAll('.node-label')
+    .attr('fill', () => getComputedStyle(document.documentElement).getPropertyValue('--text-dim').trim());
+  node.selectAll('.node-label-main')
+    .attr('fill', () => getComputedStyle(document.documentElement).getPropertyValue('--text').trim());
+}
+
+// Initial zoom to fit
+setTimeout(() => {
+  svg.transition().duration(1000).call(
+    zoom.transform,
+    d3.zoomIdentity.translate(width * 0.1, -20).scale(0.85)
+  );
+}, 1500);
+</script>
+</body>
+</html>
