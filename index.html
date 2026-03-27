@@ -202,16 +202,17 @@
 
   #add-panel {
     position: fixed;
-    top: 0; right: -320px;
-    width: 300px; height: 100vh;
+    top: 0; right: 0;
+    width: min(300px, 85vw); height: 100vh;
     background: var(--bg-warm);
     border-left: 1px solid rgba(255,255,255,0.08);
     z-index: 20;
     padding: 20px;
     overflow-y: auto;
-    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transform: translateX(100%);
   }
-  #add-panel.open { right: 0; }
+  #add-panel.open { transform: translateX(0); }
   #add-panel h3 {
     font-family: 'Cormorant Garamond', serif;
     font-size: 20px; font-weight: 300;
@@ -233,8 +234,9 @@
     border-radius: 4px;
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    padding: 8px 10px;
+    font-size: 15px;
+    padding: 10px 12px;
+    -webkit-appearance: none;
   }
   #add-panel textarea { min-height: 80px; resize: vertical; }
   #add-panel select option { background: var(--bg); }
@@ -601,7 +603,7 @@ const link = g.append('g')
   .attr('stroke-linecap', 'round');
 
 // Nodes
-const node = g.append('g')
+let node = g.append('g')
   .selectAll('g')
   .data(nodes)
   .join('g')
@@ -684,11 +686,13 @@ function showPanel(d) {
   const details = d.detail.length
     ? `<ul class="detail">${d.detail.map(x => `<li>${x}</li>`).join('')}</ul>`
     : '';
+  const deleteBtn = d.id.startsWith('usr_') ? `<button onclick="deletePerson('${d.id}')" style="margin-top:12px;padding:6px 14px;background:rgba(200,80,80,0.2);border:1px solid rgba(200,80,80,0.4);border-radius:4px;color:#c49a9a;font-size:12px;cursor:pointer">Remove</button>` : '';
   panel.innerHTML = `
     <span class="family-tag" style="background:${fam.dim};color:${fam.color}">${fam.label}</span>
     <div class="name" style="color:${fam.color}">${d.name}</div>
     <div class="dates">${d.dates || ''}</div>
     ${details}
+    ${deleteBtn}
   `;
   document.getElementById('info-panel').classList.add('open');
 
@@ -809,7 +813,10 @@ function addPerson() {
   const linkTarget = document.getElementById('add-link-target').value;
   const linkType = document.getElementById('add-link-type').value;
 
-  const id = 'usr_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+  // Deduplicate IDs
+  let id = 'usr_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
+  let suffix = 0;
+  while (nodes.find(n => n.id === id)) { suffix++; id = id.replace(/_\d+$/, '') + '_' + suffix; }
 
   // Figure out generation from linked person
   let gen = 3;
@@ -828,10 +835,7 @@ function addPerson() {
     links.push(newLink);
   }
 
-  // Re-render
   rebuildGraph();
-
-  // Save to localStorage
   saveUserNodes();
 
   // Reset form
@@ -844,34 +848,33 @@ function addPerson() {
 }
 
 function rebuildGraph() {
-  // Rebuild links
-  link.data(links).join('line')
+  // Rejoin links
+  const linkSel = g.select('g:first-child').selectAll('line').data(links);
+  linkSel.enter().append('line').merge(linkSel)
     .attr('stroke', linkColor)
     .attr('stroke-width', d => d.type === 'spouse' ? 1.2 : 2)
     .attr('stroke-dasharray', d => d.type === 'spouse' ? '4,5' : 'none')
     .attr('stroke-linecap', 'round');
 
-  // Rebuild nodes
-  const nodeJoin = node.data(nodes, d => d.id).join(
-    enter => {
-      const g = enter.append('g')
-        .attr('cursor', 'pointer')
-        .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
-      g.append('circle')
-        .attr('r', d => d.key ? 10 : 7)
-        .attr('fill', d => families[d.family]?.color || '#888')
-        .attr('stroke', d => d.key ? families[d.family]?.color || '#888' : 'none')
-        .attr('stroke-width', d => d.key ? 2 : 0)
-        .attr('stroke-opacity', 0.3)
-        .attr('fill-opacity', d => d.key ? 1 : 0.7);
-      g.append('text')
-        .attr('class', d => d.key ? 'node-label node-label-main' : 'node-label')
-        .attr('dy', d => d.key ? -16 : -12)
-        .text(d => { const p = d.name.split(' '); return p.length <= 2 ? d.name : p[0]+' '+p[p.length-1]; });
-      g.on('click', (event, d) => { event.stopPropagation(); showPanel(d); });
-      return g;
-    }
-  );
+  // Rejoin nodes — update the module-level `node` variable
+  const nodeParent = g.select('g:nth-child(2)');
+  node = nodeParent.selectAll('g').data(nodes, d => d.id);
+  const enter = node.enter().append('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+  enter.append('circle')
+    .attr('r', d => d.key ? 10 : 7)
+    .attr('fill', d => families[d.family]?.color || '#888')
+    .attr('stroke', d => d.key ? families[d.family]?.color || '#888' : 'none')
+    .attr('stroke-width', d => d.key ? 2 : 0)
+    .attr('stroke-opacity', 0.3)
+    .attr('fill-opacity', d => d.key ? 1 : 0.7);
+  enter.append('text')
+    .attr('class', d => d.key ? 'node-label node-label-main' : 'node-label')
+    .attr('dy', d => d.key ? -16 : -12)
+    .text(d => { const p = d.name.split(' '); return p.length <= 2 ? d.name : p[0]+' '+p[p.length-1]; });
+  enter.on('click', (event, d) => { event.stopPropagation(); showPanel(d); });
+  node = enter.merge(node);
 
   // Update simulation
   simulation.nodes(nodes);
@@ -917,11 +920,21 @@ function exportAdded() {
     data.nodes.map(n => `  { id: '${n.id}', name: '${n.name.replace(/'/g,"\\'")}', family: '${n.family}', gen: ${n.gen}, dates: '${(n.dates||'').replace(/'/g,"\\'")}', detail: [${n.detail.map(d => `'${d.replace(/'/g,"\\'")}'`).join(', ')}]${n.key ? ', key: true' : ''} },`).join('\n') +
     '\n\n// User-added links\n' +
     data.links.map(l => `  { source: '${l.source}', target: '${l.target}', type: '${l.type}' },`).join('\n');
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.querySelector('.btn-export');
+  const btn = document.querySelector('.btn-export');
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Export added people (copy)', 2000);
+    });
+  } else {
+    // Fallback for file:// and non-HTTPS
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
     btn.textContent = 'Copied!';
     setTimeout(() => btn.textContent = 'Export added people (copy)', 2000);
-  });
+  }
 }
 
 function updateAddedCount() {
@@ -930,6 +943,28 @@ function updateAddedCount() {
   if (!saved) { el.textContent = ''; return; }
   const count = JSON.parse(saved).nodes.length;
   el.textContent = count ? `${count} person${count > 1 ? 's' : ''} added locally` : '';
+}
+
+function deletePerson(id) {
+  const idx = nodes.findIndex(n => n.id === id);
+  if (idx === -1) return;
+  nodes.splice(idx, 1);
+  // Remove links involving this node
+  for (let i = links.length - 1; i >= 0; i--) {
+    const sid = typeof links[i].source === 'object' ? links[i].source.id : links[i].source;
+    const tid = typeof links[i].target === 'object' ? links[i].target.id : links[i].target;
+    if (sid === id || tid === id) links.splice(i, 1);
+  }
+  closePanel();
+  // Remove DOM elements and rejoin
+  g.select('g:nth-child(2)').selectAll('g').data(nodes, d => d.id).exit().remove();
+  g.select('g:first-child').selectAll('line').data(links).exit().remove();
+  simulation.nodes(nodes);
+  simulation.force('link').links(links);
+  simulation.alpha(0.3).restart();
+  saveUserNodes();
+  updateAddedCount();
+  populateLinkTargets();
 }
 
 // Load saved people on startup
